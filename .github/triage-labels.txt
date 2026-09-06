@@ -1,0 +1,15 @@
+type:bug|d73a4a|Comportamiento incorrecto del juego
+type:feature|a2eeef|Funcionalidad nueva o mejora
+type:question|d876e3|Duda o petición de aclaración
+type:docs|0075ca|Documentación (README, CLAUDE.md)
+type:refactor|c5def5|Cambio interno sin alterar comportamiento
+priority:high|b60205|Rompe el juego o bloquea jugar
+priority:medium|fbca04|Molesto pero hay forma de seguir jugando
+priority:low|0e8a16|Cosmético o mejora menor
+area:game-logic|5319e7|Piezas, colisión, rotación, bloqueo, game over
+area:rendering|1d76db|Canvas, dibujo, ghost piece, colores
+area:input|006b75|Teclado, controles, pausa
+area:ui|bfd4f2|HTML/CSS, panel lateral, overlays
+area:scoring|f9d0c4|Puntuación, líneas, niveles, velocidad
+needs-info|e4e669|Falta información para poder actuar
+triaged|ededed|Analizado automáticamente por Claude

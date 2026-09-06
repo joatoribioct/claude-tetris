@@ -1,0 +1,144 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Solo issues reales (no PRs, que también disparan `issues` en algunos casos),
+    # nunca por acciones del propio bot, nunca si ya se invocó a Claude con @claude
+    # (para no duplicar comentarios de dos workflows), y en "edited" solo si cambió
+    # el título o el cuerpo (no si solo cambiaron labels/assignees/etc.).
+    if: |
+      github.event.issue.pull_request == null &&
+      github.event.sender.type != 'Bot' &&
+      !contains(github.event.issue.body, '@claude') &&
+      !contains(github.event.issue.title, '@claude') &&
+      (github.event.action != 'edited' ||
+       github.event.changes.body != null ||
+       github.event.changes.title != null)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Sincronizar labels de triaje
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          while IFS='|' read -r name color desc; do
+            [ -z "$name" ] && continue
+            gh label create "$name" --color "$color" --description "$desc" --force
+          done < .github/triage-labels.txt
+
+      - name: Triaje con Claude
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE NUMBER: ${{ github.event.issue.number }}
+            TITLE: ${{ github.event.issue.title }}
+            AUTHOR: ${{ github.event.issue.user.login }}
+            ACTION: ${{ github.event.action }}
+            BODY:
+            ${{ github.event.issue.body }}
+
+            Eres el encargado de triaje técnico de este repositorio: un Tetris en
+            JavaScript/HTML5 Canvas puro (sin dependencias ni build step). Lee
+            CLAUDE.md para entender la arquitectura antes de analizar el issue.
+
+            Tu tarea:
+
+            1. Lee `game.js`, `index.html`, `style.css` y `CLAUDE.md` (con Read/Grep/Glob)
+               lo necesario para entender qué parte del código está implicada en el
+               issue. Ancla el análisis en funciones y comportamientos reales del
+               código (p. ej. `collide()`, `tryRotate()`, `clearLines()`, `spawn()`,
+               `loop()`, el listener de `keydown`), no en suposiciones genéricas.
+
+            2. Ejecuta `gh search issues --repo ${{ github.repository }} "<términos clave>"`
+               para detectar posibles duplicados del issue #${{ github.event.issue.number }}.
+
+            3. Ejecuta `gh label list --repo ${{ github.repository }}` para confirmar
+               los nombres exactos de las etiquetas disponibles. Elige SOLO entre esas
+               etiquetas (no inventes nombres nuevos):
+               - Exactamente una de `type:bug`, `type:feature`, `type:question`,
+                 `type:docs`, `type:refactor` (o `bug`/`enhancement`/`question`/
+                 `documentation` si el catálogo de triaje no aplica).
+               - Exactamente una de `priority:high`, `priority:medium`, `priority:low`.
+               - Una o más de `area:game-logic`, `area:rendering`, `area:input`,
+                 `area:ui`, `area:scoring` (según lo que toque el issue).
+               - Añade siempre `triaged`.
+               - Añade `needs-info` si el issue no trae información suficiente para
+                 poder actuar (pasos de reproducción, comportamiento esperado, etc.).
+               Aplica las etiquetas con:
+               `gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "..."`
+
+            4. Publica el diagnóstico como comentario en **español**, siguiendo
+               exactamente esta estructura Markdown:
+
+               ```
+               <!-- claude-triage -->
+               ## 🔍 Diagnóstico automático
+
+               **Tipo:** ... · **Prioridad:** ... (justificación breve) · **Áreas:** ...
+
+               ### Resumen
+               ...
+
+               ### Análisis técnico
+               Archivos y funciones concretas involucradas (ej. `game.js` → `clearLines()`).
+
+               ### Causa raíz probable
+               ...
+
+               ### Enfoque de solución sugerido
+               ...
+
+               ### Criterios de aceptación
+               - [ ] ...
+
+               ### Riesgos y qué verificar en el navegador
+               ...
+
+               ### Información faltante
+               (Solo incluir esta sección si aplicaste la etiqueta `needs-info`)
+               ```
+
+               Cierra el comentario con una línea en cursiva indicando que fue
+               generado automáticamente por este workflow.
+
+               IMPORTANTE — el comentario debe ser único y actualizable:
+               - Primero ejecuta
+                 `gh issue view ${{ github.event.issue.number }} --repo ${{ github.repository }} --json comments`
+                 y busca un comentario cuyo cuerpo empiece con `<!-- claude-triage -->`.
+               - Si ya existe, sobrescríbelo con
+                 `gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --edit-last --body-file <archivo>`
+                 (usando el mismo autor, ya que lo creó este mismo workflow).
+               - Si no existe, créalo con
+                 `gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body-file <archivo>`.
+               - Nunca crees un segundo comentario de diagnóstico: debe haber como
+                 máximo uno por issue en todo momento.
+
+            Restricciones estrictas:
+            - No edites el título ni el cuerpo del issue.
+            - No cierres ni reabras el issue.
+            - No modifiques ningún archivo del repositorio (esto es solo diagnóstico,
+              no implementación).
+          claude_args: |
+            --allowedTools "Read,Glob,Grep,Bash(gh label list:*),Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh search issues:*)"
+            --max-turns 25
