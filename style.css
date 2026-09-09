@@ -23,6 +23,8 @@
   --restart-color: #0f0f17;
   --restart-hover: #9bbdff;
   --grid-color: #22222e;
+  --highlight-bg: rgba(122, 162, 247, 0.25);
+  --highlight-color: #ffd54f;
 }
 
 body.light-theme {
@@ -44,6 +46,8 @@ body.light-theme {
   --restart-color: #ffffff;
   --restart-hover: #5c7cfa;
   --grid-color: #d8d8e6;
+  --highlight-bg: rgba(59, 91, 219, 0.15);
+  --highlight-color: #b8860b;
 }
 
 body {
@@ -248,5 +252,134 @@ kbd {
 }
 
 #restart-btn:hover {
+  background: var(--restart-hover);
+}
+
+/* ===== Tabla de records ===== */
+#start-screen {
+  position: fixed;
+  z-index: 50;
+  background: var(--bg);
+}
+
+.highscores-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 260px;
+}
+
+#overlay-highscores-section.hidden {
+  display: none;
+}
+
+.highscores-section h3 {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--label-color);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.highscores-table {
+  border-collapse: collapse;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  color: var(--value-color);
+  width: 100%;
+}
+
+.highscores-table td {
+  padding: 4px 10px;
+  text-align: left;
+}
+
+.highscores-table td:last-child {
+  text-align: right;
+}
+
+.highscores-table tr.highlight {
+  background: var(--highlight-bg);
+  color: var(--highlight-color);
+}
+
+.highscores-empty {
+  font-size: 13px;
+  color: var(--controls-color);
+}
+
+.stats-line {
+  font-size: 12px;
+  color: var(--controls-color);
+  text-align: center;
+}
+
+#play-btn {
+  background: var(--restart-bg);
+  color: var(--restart-color);
+  border: none;
+  border-radius: 6px;
+  padding: 12px 36px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+#play-btn:hover {
+  background: var(--restart-hover);
+}
+
+.reset-btn {
+  background: transparent;
+  color: var(--overlay-title-color);
+  border: 1px solid var(--overlay-title-color);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.reset-btn:hover {
+  background: var(--overlay-title-color);
+  color: var(--restart-color);
+}
+
+#save-name-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#save-name-wrap.hidden {
+  display: none;
+}
+
+#player-name-input {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 14px;
+  width: 140px;
+}
+
+#save-score-btn {
+  background: var(--restart-bg);
+  color: var(--restart-color);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#save-score-btn:hover {
   background: var(--restart-hover);
 }
